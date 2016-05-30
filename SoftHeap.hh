@@ -9,14 +9,12 @@ public:
 	~SoftHeap();
 
 	struct Entry {
-		Entry();
 		Entry(const double key, const T& value);
 		double mKey;
 		T mValue;
 
 	};
 
-private:
 
 	struct Node {
 		Node(const double key, const T& value);
@@ -25,7 +23,7 @@ private:
 		size_t size;
 		Node* left;
 		Node* right;
-		std::vector<Entry&> list;
+		std::vector<Entry*> list;
 
 	};
 
@@ -40,15 +38,13 @@ private:
 
 	};
 
+private:
+
 	size_t heap_rank;
 	Tree* first;
 
 };
 
-template <typename T>
-SoftHeap<T>::Entry::Entry() : {
-	
-}
 
 template <typename T>
 SoftHeap<T>::Entry::Entry(const double key, const T& value) : mKey(key), mValue(value) {
@@ -75,38 +71,41 @@ SoftHeap<T>::SoftHeap(const double key, const T& value) : heap_rank(0), first(ne
 	
 }
 
+template <typename T>
+SoftHeap<T>::~SoftHeap() {
+
+}
 
 
-/*
 template <typename T>
 inline bool SoftHeap<T>::isLeaf(Node x) const {
 	return(x->left == NULL && x->right == NULL)
 	
 }
 
-
 template <typename T>
-SoftHeap<T>::insert_tree(SoftHeap P, Tree T1, Tree T2) {
+SoftHeap<T>::insert_tree(Tree* T1, Tree* T2) {
 	T1->next = T2;
 	if(T2->prev == NULL) {
-		&(P->first) = T1;
+		first = T1;
 
 	} else {
-		(&(T2->prev))->next = T1;
+		T2->next = T1;
 	}
 }
 
 
 
 
+
 template <typename T>
-SoftHeap<T>::merge_into(SoftHeap P, SoftHeap Q) {
+static SoftHeap<T>& SoftHeap<T>::merge_into(SoftHeap<T>& P, SoftHeap<T>& Q) {
 	if(P.rank > Q.rank) {
 		return;
 	}
 
-	Tree T1 = &(P->first);
-	Tree T2 = &(Q->first);
+	Tree* T1 = P.first;
+	Tree* T2 = Q.first;
 
 	while(T1 != NULL) {
 		while //T1->rank > T2->rank {
@@ -121,7 +120,7 @@ SoftHeap<T>::merge_into(SoftHeap P, SoftHeap Q) {
 }
 
 
-
+/*
 template <typename T>
 SoftHeap<T>::meld(SoftHeap P, SoftHeap Q) {
 	if(P.heap_rank > Q.heap_rank) {
