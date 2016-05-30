@@ -1,11 +1,26 @@
-// Fibonacci heap class.
+/* 
+ * Fibonacci Heap
+ * 
+ * Big thanks to Keith for his Java implementation of this structure.
+ * While we couldn't use it directly (and I wanted to implement the structure)
+ * it was used as a guide to implementing and debugging particularly tricky
+ * operations and therefore this implementation retains a very similar 
+ * structure to Keith's in a number of places.
+ */
+
+#ifndef FibonacciHeap_Included
+#define FibonacciHeap_Included
+
+#include <cstddef>
+#include <vector>
+#include <iostream>
 
 template <typename T>
 class FibonacciHeap {
 public:
 	class Entry {
 	public:
-		Entry(const T& value, double priority);
+		 Entry(const T& value, double priority);
 		~Entry();
 
 		inline const T& getValue() const;
@@ -35,7 +50,7 @@ public:
     void operator=(Entry const &) = delete;
 	};
 
-	FibonacciHeap(); // we can do an enqueue that doesn't directly call meld, so we don't need 2 constructors
+	FibonacciHeap(); 
 	~FibonacciHeap();
 
 	inline size_t size() const;
@@ -43,13 +58,15 @@ public:
   inline size_t getSize() const;
   inline void setSize(const size_t newSize);
   inline void setMin(Entry *newMin);
-	inline Entry& findMin() const; // maybe we should return const Entry&, but could be bad because client passes handle to decreaseKey and other shit
+	inline Entry& findMin() const; 
 
 	Entry& enqueue(const T& value, double priority);
+  // object returned MUST BE FREED after use
 	Entry& extractMin();
 	void decreaseKey(Entry& entry, double newPriority);
 
-	static FibonacciHeap<T> meld(FibonacciHeap<T>& first,
+  // object returned MUST BE FREED after use
+	static FibonacciHeap<T>& meld(FibonacciHeap<T>& first,
 															 FibonacciHeap<T>& second);
 
 private:
@@ -57,7 +74,7 @@ private:
 	size_t mSize;
 
   void cutNode(Entry &entry);
-  void mergeLists(Entry *one, Entry *two);
+  static void mergeLists(Entry *one, Entry *two);
 
   FibonacciHeap(FibonacciHeap const &) = delete;
   void operator=(FibonacciHeap const &) = delete;
@@ -67,8 +84,24 @@ private:
 template <typename T>
 FibonacciHeap<T>::Entry::Entry(const T& value, double priority) :
 		mValue(value), mPriority(priority), mParent(NULL), mChild(NULL), 
-    mNext(&this), mPrev(&this), marked(false), mOrder(0) {
+    mNext(this), mPrev(this), marked(false), mDegree(0) {
 	// Handled in initializer list.
+}
+
+// Entry destructor, recursively deletes all children and iteratively
+// and iteratively deletes all siblings. If you don't want to destroy
+// the siblings, make sure this node has no siblings before deleting it.
+template <typename T>
+FibonacciHeap<T>::Entry::~Entry() {
+  if (mChild) {
+    delete mChild;
+  }
+  while (mNext != this) {
+    Entry *next = mNext;
+    mNext = mNext->mNext;
+    next->mNext = next;
+    delete next;
+  }
 }
 
 template <typename T>
@@ -122,8 +155,13 @@ inline void FibonacciHeap<T>::Entry::decreaseDegree() {
 }
 
 template <typename T>
-FibonacciHeap::FibonacciHeap() : mSize(0), mMin(NULL) {
+FibonacciHeap<T>::FibonacciHeap() : mSize(0), mMin(NULL) {
 	// Handled in initializer list.
+}
+
+template <typename T>
+FibonacciHeap<T>::~FibonacciHeap() {
+  delete mMin;
 }
 
 template <typename T>
@@ -152,26 +190,28 @@ inline void FibonacciHeap<T>::setMin(Entry *newMin) {
 }
 
 template <typename T>
-inline FibonacciHeap<T>::Entry& FibonacciHeap<T>::findMin() const {
+inline typename FibonacciHeap<T>::Entry& FibonacciHeap<T>::findMin() const {
 	// doesn't work if empty
 	return *mMin;
 }
 
 template <typename T>
-FibonacciHeap<T>::Entry& FibonacciHeap<T>::extractMin() {
+typename FibonacciHeap<T>::Entry& FibonacciHeap<T>::extractMin() {
   // segfaults if empty
-  min = *mMin;
+  Entry *min = mMin;
+  
+  // pull the min node out of the root list
   if (mMin->mNext == mMin) {
     mMin = NULL;
   } else {
-    mMin->prev->next = mMin->next;
-    mMin->next->prev = mMin->prev;
-    mMin = mMin->next;
+    mMin->mPrev->mNext = mMin->mNext;
+    mMin->mNext->mPrev = mMin->mPrev;
+    mMin = mMin->mNext;
   }
-
   mSize--;
-  
-  Entry *firstChild = min.mChild;
+ 
+  // sever any children from the min node and promote them to the root list
+  Entry *firstChild = min->mChild;
   if (firstChild) {
     Entry *cur = firstChild->mNext;
     do {
@@ -184,14 +224,22 @@ FibonacciHeap<T>::Entry& FibonacciHeap<T>::extractMin() {
       mMin = mMin->getPriority() <= firstChild->getPriority() 
         ? mMin : firstChild;
     } else {
-      mMin = firstChild
+      mMin = firstChild;
     }
   }
 
+  // clean up the min node for deletion by user
+  min->mNext = min;
+  min->mPrev = min;
+  min->mChild = NULL;
+
+  // if min was the last node, no merging should occur
   if (!mMin) {
-    return min;
+    return *min;
   }
 
+  // create a vector with a bucket for trees of each degree
+  // and a vector to store the root nodes and make sure we visit them all
   std::vector<Entry *> buckets;
   std::vector<Entry *> toVisit;
   
@@ -201,17 +249,22 @@ FibonacciHeap<T>::Entry& FibonacciHeap<T>::extractMin() {
     toVisit.push_back(cur);
   }
 
-  for (std::vector<Entry *>::iterator it = toVisit.begin(); 
+  // put each root node (tree) into the appropriate bucket
+  // merge if necessary
+  for (typename std::vector<Entry *>::iterator it = toVisit.begin(); 
       it != toVisit.end(); ++it) {
     Entry *cur = *it;
     for (;;) {
-      while (cur->getDegree() < buckets.size()) {
+      // extend the bucket list (vector really but where's the pun in that)
+      while (cur->getDegree() >= buckets.size()) {
         buckets.push_back(NULL);
       }
+      // if the bucket was empty, fill it
       if (!buckets[cur->getDegree()]) {
         buckets[cur->getDegree()] = cur;
         break;
       }
+      // otherwise merge
       Entry *other = buckets[cur->getDegree()];
       buckets[cur->getDegree()] = NULL;
       
@@ -234,7 +287,7 @@ FibonacciHeap<T>::Entry& FibonacciHeap<T>::extractMin() {
       mMin = cur;
   }
 
-  return min
+  return *min;
 }
 
 template <typename T>
@@ -251,46 +304,55 @@ void FibonacciHeap<T>::decreaseKey(Entry& entry, double newPriority) {
 }
 
 template <typename T>
-FibonacciHeap<T>::Entry& FibonacciHeap<T>::enqueue(const T& value, 
+typename FibonacciHeap<T>::Entry& FibonacciHeap<T>::enqueue(const T& value, 
     const double priority) {
-  Entry newEntry = new Entry(value, priority);
-  mergeLists(&newEntry, mMin);
-  if (newEntry.getPriority() < mMin->getPriority()) {
-    mMin = &newEntry;
+  Entry *newEntry = new Entry(value, priority);
+  mergeLists(newEntry, mMin);
+  if (!mMin || newEntry->getPriority() < mMin->getPriority()) {
+    mMin = newEntry;
   }
   mSize++;
+  return *newEntry;
 }
 
 template <typename T>
 void FibonacciHeap<T>::cutNode(Entry &entry) {
+
   entry.unmark();
   if (!entry.mParent) return;
+
+  // if the node has siblings pull it out of the siblings list and point
+  // the parent to the next sibling instead
   if (entry.mNext != &entry) {
     entry.mPrev->mNext = entry.mNext;
     entry.mNext->mPrev = entry.mPrev;
-  }
-  if (entry.mParent->mChild == &entry) {
     entry.mParent->mChild = entry->mNext;
   }
   if (entry.mParent->mChild == &entry) {
     entry.mParent->mChild = NULL;
   }
   entry.mParent->decreaseDegree();
+
+  // merge the node with the root list
   entry.mNext = entry.mPrev = &entry;
   mergeLists(mMin, &entry);
   if (mMin->getPriority() < entry.getPriority()) {
     mMin = &entry;
   }
+
+  // recursively cut the parent if it was marked
   if (entry.mParent->isMarked()) {
     cutNode(*entry.mParent);
   } else {
-    entry.mParent->mark()
+    entry.mParent->mark();
   }
   entry.mParent = NULL;
 }
 
 template <typename T>
 void FibonacciHeap<T>::mergeLists(Entry *one, Entry *two) {
+  if (!one || !two) return;
+
   one->mPrev->mNext = two->mNext;
   two->mNext->mPrev = one->mPrev;
   two->mNext = one;
@@ -298,20 +360,20 @@ void FibonacciHeap<T>::mergeLists(Entry *one, Entry *two) {
 }
 
 template <typename T>
-static FibonacciHeap<T> FibonacciHeap<T>::meld(FibonacciHeap<T>& first, 
+FibonacciHeap<T>& FibonacciHeap<T>::meld(FibonacciHeap<T>& first, 
     FibonacciHeap<T>& second) {
 
-  FibonacciHeap<T> result = new FibonacciHeap<T>();
-  Entry minOne = first.findMin();
-  Entry minTwo = second.findMin();
+  FibonacciHeap<T> *result = new FibonacciHeap<T>();
+  Entry& minOne = first.findMin();
+  Entry& minTwo = second.findMin();
 
   //merge the root lists of the two heaps
   mergeLists(&minOne, &minTwo);
 
   //set min to the lower of the two and set size
-  result.setMin(minOne.getPriority() < minTwo.getPriority() 
+  result->setMin(minOne.getPriority() < minTwo.getPriority() 
       ? &minOne : &minTwo);
-  result.setSize(first.getSize() + second.getSize());
+  result->setSize(first.getSize() + second.getSize());
 
   //empty out the old heaps
   first.setMin(NULL);
@@ -319,5 +381,7 @@ static FibonacciHeap<T> FibonacciHeap<T>::meld(FibonacciHeap<T>& first,
   first.setSize(0);
   second.setSize(0);
 
-  return result;
+  return *result;
 }
+
+#endif
