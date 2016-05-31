@@ -17,76 +17,76 @@
 
 template <typename T>
 class FibonacciHeap {
-public:
-	class Entry {
-	public:
-		 Entry(const T& value, double priority);
-		~Entry();
+  public:
+    class Entry {
+      public:
+        Entry(const T& value, double priority);
+        ~Entry();
 
-		inline const T& getValue() const;
-		inline void setValue(const T& newValue);
-		inline double getPriority() const;
-    inline void setPriority(const double newPriority);
-    inline bool isMarked() const;
-    inline void mark();
-    inline void unmark();
-    inline int getDegree() const;
-    inline void increaseDegree();
-    inline void decreaseDegree();
+        inline const T& getValue() const;
+        inline void setValue(const T& newValue);
+        inline double getPriority() const;
+        inline void setPriority(const double newPriority);
+        inline bool isMarked() const;
+        inline void mark();
+        inline void unmark();
+        inline int getDegree() const;
+        inline void increaseDegree();
+        inline void decreaseDegree();
 
-    Entry *mParent;
-    Entry *mChild;
-    Entry *mNext;
-    Entry *mPrev;
+        Entry *mParent;
+        Entry *mChild;
+        Entry *mNext;
+        Entry *mPrev;
 
-	private:
-    bool marked;
-    int mDegree;
+      private:
+        bool marked;
+        int mDegree;
 
-		T mValue;
-		double mPriority;
+        T mValue;
+        double mPriority;
 
-    Entry(Entry const &) = delete;
-    void operator=(Entry const &) = delete;
-	};
+        Entry(Entry const &) = delete;
+        void operator=(Entry const &) = delete;
+    };
 
-	FibonacciHeap(); 
-	~FibonacciHeap();
+    FibonacciHeap(); 
+    ~FibonacciHeap();
 
-	inline size_t size() const;
-	inline bool isEmpty() const;
-  inline size_t getSize() const;
-  inline void setSize(const size_t newSize);
-  inline void setMin(Entry *newMin);
-	inline Entry& findMin() const; 
+    inline size_t size() const;
+    inline bool isEmpty() const;
+    inline size_t getSize() const;
+    inline void setSize(const size_t newSize);
+    inline void setMin(Entry *newMin);
+    inline Entry& findMin() const; 
 
-	Entry& enqueue(const T& value, double priority);
-  // object returned MUST BE FREED after use
-	Entry& extractMin();
-	void decreaseKey(Entry& entry, double newPriority);
+    Entry& enqueue(const T& value, double priority);
+    // object returned MUST BE FREED after use
+    Entry& extractMin();
+    void decreaseKey(Entry& entry, double newPriority);
 
-  // object returned MUST BE FREED after use
-	static FibonacciHeap<T>& meld(FibonacciHeap<T>& first,
-															 FibonacciHeap<T>& second);
+    // object returned MUST BE FREED after use
+    static FibonacciHeap<T>& meld(FibonacciHeap<T>& first,
+        FibonacciHeap<T>& second);
 
-private:
-	Entry *mMin;
-	size_t mSize;
+  private:
+    Entry *mMin;
+    size_t mSize;
 
-  void cutNode(Entry &entry);
-  static void mergeLists(Entry *one, Entry *two);
+    void cutNode(Entry &entry);
+    static void mergeLists(Entry *one, Entry *two);
 
-  FibonacciHeap(FibonacciHeap const &) = delete;
-  void operator=(FibonacciHeap const &) = delete;
+    FibonacciHeap(FibonacciHeap const &) = delete;
+    void operator=(FibonacciHeap const &) = delete;
 };
 
 /* Entry constructor */
 template <typename T>
 FibonacciHeap<T>::Entry::Entry(const T& value, double priority) :
-		mValue(value), mPriority(priority), mParent(NULL), mChild(NULL), 
-    mNext(this), mPrev(this), marked(false), mDegree(0) {
-	// Handled in initializer list.
-}
+  mValue(value), mPriority(priority), mParent(NULL), mChild(NULL), 
+  mNext(this), mPrev(this), marked(false), mDegree(0) {
+    // Handled in initializer list.
+  }
 
 // Entry destructor, recursively deletes all children and iteratively
 // and iteratively deletes all siblings. If you don't want to destroy
@@ -106,17 +106,17 @@ FibonacciHeap<T>::Entry::~Entry() {
 
 template <typename T>
 inline const T& FibonacciHeap<T>::Entry::getValue() const {
-	return mValue;
+  return mValue;
 }
 
 template <typename T>
 inline void FibonacciHeap<T>::Entry::setValue(const T& newValue) {
-	mValue = newValue;
+  mValue = newValue;
 }
 
 template <typename T>
 inline double FibonacciHeap<T>::Entry::getPriority() const {
-	return mPriority;
+  return mPriority;
 }
 
 template <typename T>
@@ -156,7 +156,7 @@ inline void FibonacciHeap<T>::Entry::decreaseDegree() {
 
 template <typename T>
 FibonacciHeap<T>::FibonacciHeap() : mSize(0), mMin(NULL) {
-	// Handled in initializer list.
+  // Handled in initializer list.
 }
 
 template <typename T>
@@ -166,12 +166,12 @@ FibonacciHeap<T>::~FibonacciHeap() {
 
 template <typename T>
 inline size_t FibonacciHeap<T>::size() const {
-	return mSize;
+  return mSize;
 }
 
 template <typename T>
 inline bool FibonacciHeap<T>::isEmpty() const {
-	return mSize == 0;
+  return mSize == 0;
 }
 
 template <typename T>
@@ -191,15 +191,15 @@ inline void FibonacciHeap<T>::setMin(Entry *newMin) {
 
 template <typename T>
 inline typename FibonacciHeap<T>::Entry& FibonacciHeap<T>::findMin() const {
-	// doesn't work if empty
-	return *mMin;
+  // doesn't work if empty
+  return *mMin;
 }
 
 template <typename T>
 typename FibonacciHeap<T>::Entry& FibonacciHeap<T>::extractMin() {
   // segfaults if empty
   Entry *min = mMin;
-  
+
   // pull the min node out of the root list
   if (mMin->mNext == mMin) {
     mMin = NULL;
@@ -209,7 +209,7 @@ typename FibonacciHeap<T>::Entry& FibonacciHeap<T>::extractMin() {
     mMin = mMin->mNext;
   }
   mSize--;
- 
+
   // sever any children from the min node and promote them to the root list
   Entry *firstChild = min->mChild;
   if (firstChild) {
@@ -242,7 +242,7 @@ typename FibonacciHeap<T>::Entry& FibonacciHeap<T>::extractMin() {
   // and a vector to store the root nodes and make sure we visit them all
   std::vector<Entry *> buckets;
   std::vector<Entry *> toVisit;
-  
+
   Entry *first = mMin;
   toVisit.push_back(first);
   for (Entry *cur = first->mNext; cur != first; cur = cur->mNext) {
@@ -267,7 +267,7 @@ typename FibonacciHeap<T>::Entry& FibonacciHeap<T>::extractMin() {
       // otherwise merge
       Entry *other = buckets[cur->getDegree()];
       buckets[cur->getDegree()] = NULL;
-      
+
       Entry *greater = other->getDegree() < cur->getDegree() ? cur : other;
       Entry *lesser = other->getDegree() < cur->getDegree() ? other : cur;
       greater->mNext->mPrev = greater->mPrev;
