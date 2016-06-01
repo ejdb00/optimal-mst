@@ -1,25 +1,40 @@
+#ifndef DisjointSetForest_Included
+#define DisjointSetForest_Included
+
+#include "UndirectedGraph.hh"
+#include "DisjointSet.hh"
+
+#include <unordered_map>
+#include <limits>
+
 template <typename T>
-class DisjointSetGraph {
+class DisjointSetForest {
 public:
-	DisjointSetGraph();
-	~DisjointSetGraph();
+	DisjointSetForest();
+  //TODO: implement this
+  //DisjointSetForest(UndirectedGraph<T>& graph);
+	~DisjointSetForest();
 
 	inline size_t size() const;
 	inline bool isEmpty() const;
 	inline bool containsNode(const T& value) const;
 
-	inline void edgeCost(const T& first, const T& second) const;
-	inline const std::unordered_map<const T&, double>& edgesFrom(const T& value)
-			const;
+	DisjointSet<T>& addNode(const T& value); // can consider making this return a bool
 
-	void addNode(const T& value); // can consider making this return a bool
-	void addEdge(const T& first, const T& second, double weight);
-	void removeEdge(const T& first, const T& second);
+	void addEdge(DisjointSet<T>& first, DisjointSet<T>& second, double weight);
+	void removeEdge(DisjointSet<T>& first, DisjointSet<T>& second);
 
-	const T& contractEdge(const T& first, const T& second);
+	inline double edgeCost(DisjointSet<T>& first, DisjointSet<T>& second) const;
+	inline const std::unordered_map<DisjointSet<T>&, double>& 
+    edgesFrom(DisjointSet<T>& set) const;
 
-	typedef std::unordered_map<const T&, double>::iterator iterator;
-	typedef std::unordered_map<const T&, double>::const_iterator const_iterator;
+	const T& contractEdge(DisjointSet<T>& first, DisjointSet<T>& second);
+
+  const bool sameSuperNode(const T& first, const T& second);
+  inline DisjointSet<T>& superNodeOf(const T& value);
+
+	typedef std::unordered_map<DisjointSet<T>&, double>::iterator iterator;
+	typedef std::unordered_map<DisjointSet<T>&, double>::const_iterator const_iterator;
 
 	inline iterator begin();
 	inline iterator end();
@@ -29,99 +44,147 @@ public:
 	inline const_iterator cend() const;
 
 private:
-	std::unordered_map<const T&, std::unordered_map<const T&, double>> mGraph;
+  std::unordered_map<const T&, DisjointSet<T>&> nodes;
+	std::unordered_map<DisjointSet<T>&, std::unordered_map<DisjointSet<T>&, double>> mForest;
 };
 
 template <typename T>
-UndirectedGraph<T>::UndirectedGraph() {
+DisjointSetForest<T>::DisjointSetForest() {
+	// Does nothing.
+}
+
+/*
+template <typename T>
+DisjointSetForest<T>::DisjointSetForest(UndirectedGraph<T>& graph) {
+  TODO: implement
+}
+*/
+
+template <typename T>
+DisjointSetForest<T>::~DisjointSetForest() {
 	// Does nothing.
 }
 
 template <typename T>
-UndirectedGraph<T>::~UndirectedGraph() {
-	// Does nothing.
+inline size_t DisjointSetForest<T>::size() const {
+	return mForest.size();
 }
 
 template <typename T>
-inline size_t UndirectedGraph<T>::size() const {
-	return mGraph.size();
+inline bool DisjointSetForest<T>::isEmpty() const {
+	return mForest.empty();
 }
 
 template <typename T>
-inline bool UndirectedGraph<T>::isEmpty() const {
-	return mGraph.empty();
+inline bool DisjointSetForest<T>::containsNode(const T& value) const {
+	return mForest.find(nodes[value]) != mForest.end();
 }
 
 template <typename T>
-inline bool UndirectedGraph<T>::containsNode(const T& value) const {
-	return mGraph.find(value) != mGraph.end();
-}
-
-template <typename T>
-inline void UndirectedGraph<T>::edgeCost(const T& first,
-																				 const T& second) const {
+inline double DisjointSetForest<T>::edgeCost(DisjointSet<T>& first,
+																				 DistjointSet<T>& second) const {
 	// maybe include checks?
-	return mGraph[first][second];
+  if (mForest.find(first) == mForest.end() ||
+      mForest[first].find(second) == mForest[first].end()) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+	return mForest[first][second];
 }
 
 template <typename T>
-inline const std::unordered_map<const T&, double>&
-UndirectedGraph<T>::edgesFrom(const T& value) const {
-	return mGraph[value];
+inline const std::unordered_map<DisjointSet<T>&, double>&
+DisjointSetForest<T>::edgesFrom(DisjointSet<T>& value) const {
+	return mForest[value];
 }
 
 template <typename T>
-void UndirectedGraph<T>::addNode(const T& value) {
-	mGraph[value];
+inline DisjointSet<T>& DisjointSetForest<T>::superNodeOf(const T& value) {
+  return nodes[value];
 }
 
 template <typename T>
-void UndirectedGraph<T>::addEdge(const T& first, const T& second,
-																 double weight) {
-	mGraph[first][second] = weight;
-	mGraph[second][first] = weight;
+DisjointSet<T>& DisjointSetForest<T>::addNode(const T& value) {
+  nodes[value] = new DisjointSet<T>(value);
+	mForest[nodes[value]];
+  return nodes[value];
 }
 
 template <typename T>
-void UndirectedGraph<T>::removeEdge(const T& first, const T& second) {
-	mGraph[first].erase(second);
-	mGraph[second].erase(first);
+void DisjointSetForest<T>::addEdge(DisjointSet<T>& first, 
+    DisjointSet<T>& second, double weight) {
+  double cost = edgeCost(first, second);
+  if (!std::isnan(cost) && weight > cost) return;
+	mForest[first.find()][second.find()] = weight;
+	mForest[second.find()][first.find()] = weight;
+}
+
+template <typename T>
+void DisjointSetForest<T>::removeEdge(DisjointSet<T>& first, 
+    DisjointSet<T>& second) {
+  if (first.find() == second.find()) return;
+	mForest[first.find()].erase(second.find());
+	mForest[second.find()].erase(first.find());
 }
 
 // THESE MUST BE VALID REPRESENTATIVES!
 // We also assume simple graph (no self loops or multi-edges)
 template <typename T>
-const T&UndirectedGraph<T>::contractEdge(const T& first, const T& second) {
+DisjointSet<T>& DisjointSetForest<T>::contractEdge(DisjointSet& first, 
+    DisjointSet<T>& second) {
+  if (first.find() == second.find()) return;
 	removeEdge(first, second);
-	mNodeSet.union(first, second); // assumes these are representatives and first is the new rep
-	
+  const std::unordered_map<DisjointSet<T>&, double>& fromFirst;
+  const std::unordered_map<DisjointSet<T>&, double>& fromSecond;
+  std::unordered_map<DisjointSet<T>&, double> fromNew();
+  for (iterator it = fromFirst.begin(); it != fromFirst.end(); ++it) {
+    fromNew[it->first] = it->second;
+    removeEdge(first, it->first);
+  }
+  for (iterator it = fromSecond.begin(); it != fromSecond.end(); ++it) {
+    if (fromNew.find(it->first) == fromNew.end() && 
+        fromNew.find(it->first)->second > it->second) {
+      fromNew[it->first] = it->second;
+    }
+    removeEdge(second, it->first);
+  }
+  DisjointSet<T>& super = unionSets(first, second);
+	for (iterator it = fromNew.begin(); it != fromNew.end(); ++it) {
+    addEdge(super, it->first, it->second);
+  }
 }
 
 template <typename T>
-void UndirectedGraph<T>::iterator begin() {
-	return mGraph.begin();
+const bool DisjointSetForest<T>::sameSuperNode(const T& first, const T& second) {
+  return nodes[first].find() == nodes[second].find()
 }
 
 template <typename T>
-void UndirectedGraph<T>::iterator end() {
-	return mGraph.end();
-}
-
-void UndirectedGraph<T>::const_iterator begin() const {
-	return mGraph.begin();
+void DisjointSetForest<T>::iterator begin() {
+	return mForest.begin();
 }
 
 template <typename T>
-void UndirectedGraph<T>::const_iterator end() const {
-	return mGraph.end();
+void DisjointSetForest<T>::iterator end() {
+	return mForest.end();
+}
+
+void DisjointSetForest<T>::const_iterator begin() const {
+	return mForest.begin();
 }
 
 template <typename T>
-void UndirectedGraph<T>::iterator cbegin() {
-	return mGraph.cbegin();
+void DisjointSetForest<T>::const_iterator end() const {
+	return mForest.end();
 }
 
 template <typename T>
-void UndirectedGraph<T>::iterator cend() {
-	return mGraph.cend();
+void DisjointSetForest<T>::iterator cbegin() {
+	return mForest.cbegin();
 }
+
+template <typename T>
+void DisjointSetForest<T>::iterator cend() {
+	return mForest.cend();
+}
+
+#endif

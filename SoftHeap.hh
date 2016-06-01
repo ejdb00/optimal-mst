@@ -77,8 +77,6 @@ class SoftHeap {
     void insert(const double key, const T& value);
     void meld(SoftHeap<T>& p);
 
-    // debugging functions
-    void countTrees();
 
 
   private:
@@ -89,7 +87,6 @@ class SoftHeap {
     size_t heapRank;
     Tree* first;
 
-//    EntryList *returned;
     EntryList *corrupted;
 
     inline bool is_leaf(Node *node) const;
@@ -104,6 +101,9 @@ class SoftHeap {
     void repeated_combine(size_t k);
 
     static void merge_into(SoftHeap<T>& p, SoftHeap<T>& q);
+
+    // debugging functions
+    void countTrees();
 
 };
 
@@ -143,12 +143,11 @@ SoftHeap<T>::EntryList::~EntryList() {
 template <typename T>
 void SoftHeap<T>::EntryList::concatenate(EntryList *other) {
   if (other->size == 0) return;
-  if (size == 0) {
-    head = other->head;
-  } else {
-    tail->next = other->head;
+  other->tail->next = head;
+  head = other->head;
+  if (!tail) {
+    tail = other->tail;
   }
-  tail = other->tail;
   size += other->size;
   other->size = 0;
   other->head = other->tail = NULL;
@@ -208,21 +207,19 @@ SoftHeap<T>::Tree::~Tree() {
 template <typename T>
 SoftHeap<T>::SoftHeap(const double key, const T& value, const size_t r) : 
   heapRank(0), first(new Tree(key, value)), mR(r), mSize(1), 
-  corrupted(new EntryList())/*, returned(new EntryList())*/ {
+  corrupted(new EntryList()) {
   // handled in initializer list
 }
 
 template <typename T>
 SoftHeap<T>::SoftHeap() : 
-  heapRank(0), first(NULL), mR(0), mSize(0), corrupted(new EntryList())/*, 
-  returned(new EntryList())*/ {
+  heapRank(0), first(NULL), mR(0), mSize(0), corrupted(new EntryList()) {
   // handled in initializer list
 }
 
 template <typename T>
 SoftHeap<T>::~SoftHeap() {
   delete corrupted;
-//  delete returned;
   delete first;
 }
 
@@ -268,6 +265,7 @@ void SoftHeap<T>::insert(const double key, const T& value) {
   meld(newHeap);
 }
 
+// helper function used for debugging the root list
 template <typename T>
 void SoftHeap<T>::countTrees() {
   Tree *cur = first;
@@ -291,7 +289,6 @@ void SoftHeap<T>::countTrees() {
     cur = cur->next;
   }
   std::cout << "NULL" << std::endl;
-//  std::cout << "There are " << i << " trees in the root list" << std::endl;
 }
 
 // Melds two heaps, returning the one which originally had greater rank
@@ -309,16 +306,13 @@ void SoftHeap<T>::meld(SoftHeap& p) {
     
   // merge the root list of q into the root list of p, 
   // then combine trees as necessary
-//  resultHeap->countTrees();
   resultHeap->setSize(otherHeap->getSize() + resultHeap->getSize());
   merge_into(*otherHeap, *resultHeap);
   otherHeap->setFirst(NULL);
   otherHeap->setSize(0);
   otherHeap->setRank(0);
-//  resultHeap->countTrees();
   // combine the trees in the root list of p
   resultHeap->repeated_combine(otherHeap->getRank());
-//  resultHeap->countTrees();
 
   // if our result heap was p, transfer its members to us
   if (resultHeap != this) {
@@ -404,9 +398,7 @@ void SoftHeap<T>::remove_tree(Tree *tree) {
   }
   if (tree->next) {
     tree->next->prev = tree->prev;
-  } /*else {
-    tree->prev->suffixMin = tree->prev;
-  } */
+  } 
 
   // clean up our tree, make sure it doesn't recursively clean up others
   tree->next = NULL;
@@ -489,7 +481,6 @@ typename SoftHeap<T>::Entry* SoftHeap<T>::pick_element(Node *node) {
   // if this entry was never corrupted, and therefore corresponds to our ckey,
   // add it to the 'returned' list for cleanup, since it was never added to the
   // 'corrupted' list
-//  returned->add(entry);
   if (entry == node->ckeyEntry) {
     node->ckeyEntry = NULL;
   }
@@ -542,7 +533,7 @@ void SoftHeap<T>::sift(Node *node) {
       node->right = node->left;
       node->left = tmp;
     }
-    // append the left child's element list to our element list, 
+    // prepend the left child's element list to our element list, 
     // clearing the child list in the process
     concatenate(node, node->left);
 
@@ -551,11 +542,11 @@ void SoftHeap<T>::sift(Node *node) {
     // an entry may only be corrupted once, and it happens when this node takes on a 
     // child's ckey
     if (node->ckeyEntry) {
-      std::cout << "CORRUPTED!!" << std::endl;
       corrupted->add(new Entry(node->ckeyEntry->mKey, node->ckeyEntry->mValue));
     }
     // update our pointer to the entry with key ckey
     node->ckeyEntry = node->left->ckeyEntry;
+    node->left->ckeyEntry = NULL;
 
     // update ckey to the ckey of the left child
     node->ckey = node->left->ckey;
@@ -586,14 +577,6 @@ void SoftHeap<T>::repeated_combine(size_t k) {
         // combine the trees, update the rank of the new tree, and remove the old one
         tree->root = combine(tree->root, tree->next->root);
         tree->rank = tree->root->rank;
-        /*
-        if (tree->next->suffixMin == tree->next || 
-            tree->root->ckey <= tree->next->suffixMin->root->ckey) {
-          tree->suffixMin = tree;
-        } else {
-          tree->suffixMin = tree->next->suffixMin;
-        }
-        */
         remove_tree(tree->next);
       }
     } else if (tree->rank > k) {
