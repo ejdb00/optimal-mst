@@ -40,7 +40,7 @@ class SoftHeap {
       Node();
       ~Node();
 
-      size_t ckey;
+      double ckey;
       Entry *ckeyEntry;
       size_t rank;
       size_t size;
@@ -373,6 +373,7 @@ void SoftHeap<T>::insert_tree(Tree *tree1, Tree *tree2) {
   } else {
     tree2->prev->next = tree1;
   }
+  tree1->prev = tree2->prev;
   tree2->prev = tree1;
 }
 
